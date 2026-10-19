@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Concept Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1116;
+    --panel: #151a22;
+    --panel-hover: #1b2230;
+    --line: #232b38;
+    --text: #e8ecf2;
+    --muted: #8b95a7;
+    --accent: #6ee7b7;
+    --accent-dim: rgba(110, 231, 183, 0.12);
+    --danger: #f87171;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    background-image: radial-gradient(900px 400px at 50% -100px, rgba(110, 231, 183, 0.08), transparent);
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 64px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 24px 0; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
+  .logo {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--accent-dim); border: 1px solid rgba(110, 231, 183, 0.4);
+    display: grid; place-items: center; color: var(--accent); font-size: 15px;
+  }
+  .tag { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+
+  .steps { display: flex; gap: 8px; margin: 8px 0 40px; }
+  .steps span { flex: 1; height: 4px; border-radius: 4px; background: var(--line); }
+  .steps span.on { background: var(--accent); }
+
+  h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+  .lead { color: var(--muted); font-size: 17px; max-width: 620px; margin: 0 0 32px; }
+  .label { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card {
+    text-align: left; font: inherit; color: inherit; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; display: flex; gap: 14px; align-items: flex-start;
+    transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    animation: rise .4s ease both;
+  }
+  .card:hover, .card:focus-visible { background: var(--panel-hover); border-color: rgba(110, 231, 183, 0.5); transform: translateY(-2px); outline: none; }
+  .num { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--accent); background: var(--accent-dim); border-radius: 8px; padding: 4px 8px; }
+  .card-title { font-weight: 600; font-size: 16px; line-height: 1.35; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .skeleton { height: 78px; border-radius: 14px; background: linear-gradient(90deg, var(--panel) 25%, var(--panel-hover) 50%, var(--panel) 75%); background-size: 200% 100%; animation: shimmer 1.2s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  .error { background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.4); border-radius: 14px; padding: 18px; }
+  .error strong { color: var(--danger); }
+  .error button { margin-top: 12px; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+  .error button:hover { border-color: var(--accent); }
+  .error code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); display: block; margin-top: 8px; word-break: break-all; }
+
+  .picked { background: var(--accent-dim); border: 1px solid rgba(110, 231, 183, 0.4); border-radius: 14px; padding: 18px; margin-top: 24px; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="logo">✓</div> Concept Check</div>
+    <div class="tag">Module 2</div>
+  </header>
+
+  <div class="steps" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
+
+  <h1>Do you understand it, or can you just recite it?</h1>
+  <p class="lead">Pick one idea from Module 2 and explain it in your own words. We will find the sentence where understanding turns into a phrase.</p>
+
+  <div class="label">Pick an idea</div>
+  <div id="ideas" class="grid" aria-live="polite"></div>
+  <div id="picked"></div>
+
+  <footer>Skeleton build: nothing is saved yet.</footer>
+</div>
+
+<script>
+const box = document.getElementById("ideas");
+const pickedBox = document.getElementById("picked");
+
+function showLoading() {
+  box.innerHTML = Array.from({ length: 6 }, () => '<div class="skeleton"></div>').join("");
+}
+
+function showError(err) {
+  box.innerHTML = "";
+  const d = document.createElement("div");
+  d.className = "error";
+  d.style.gridColumn = "1 / -1";
+  d.innerHTML = "<strong>Could not load the ideas.</strong><br>Check your connection and try again.";
+  const code = document.createElement("code");
+  code.textContent = String(err.message || err);
+  const b = document.createElement("button");
+  b.textContent = "Try again";
+  b.onclick = load;
+  d.append(code, b);
+  box.append(d);
+}
+
+function render(ideas) {
+  box.innerHTML = "";
+  ideas.forEach((idea, i) => {
+    const b = document.createElement("button");
+    b.className = "card";
+    b.style.animationDelay = (i * 50) + "ms";
+    const n = document.createElement("span");
+    n.className = "num";
+    n.textContent = String(i + 1).padStart(2, "0");
+    const t = document.createElement("span");
+    t.className = "card-title";
+    t.textContent = idea.title;
+    b.append(n, t);
+    b.onclick = () => {
+      pickedBox.innerHTML = "";
+      const p = document.createElement("div");
+      p.className = "picked";
+      p.textContent = "You picked: " + idea.title + " (the next screen comes in the next step).";
+      pickedBox.append(p);
+    };
+    box.append(b);
+  });
+}
+
+async function load() {
+  showLoading();
+  try {
+    const r = await fetch("/api/ideas");
+    if (!r.ok) throw new Error("Request failed (" + r.status + ")");
+    const data = await r.json();
+    if (!Array.isArray(data)) throw new Error("Unexpected reply: " + JSON.stringify(data).slice(0, 120));
+    render(data);
+  } catch (e) {
+    showError(e);
+  }
+}
+load();
+</script>
+</body>
+</html>
