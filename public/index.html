@@ -10,6 +10,7 @@
 <style>
   :root {
     --bg: #0e1116;
+    --side: #0b0e13;
     --panel: #151a22;
     --panel-hover: #1b2230;
     --line: #232b38;
@@ -31,14 +32,87 @@
     line-height: 1.55;
     min-height: 100vh;
     background-image: radial-gradient(900px 400px at 50% -100px, rgba(110, 231, 183, 0.08), transparent);
+    background-repeat: no-repeat;
   }
-  .wrap { max-width: 820px; margin: 0 auto; padding: 0 20px 80px; }
   [hidden] { display: none !important; }
+  button { font: inherit; }
 
-  header { display: flex; align-items: center; justify-content: space-between; padding: 24px 0 18px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; }
-  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent-dim); border: 1px solid var(--accent-line); display: grid; place-items: center; color: var(--accent); font-size: 15px; }
+  .logo { width: 28px; height: 28px; border-radius: 8px; background: var(--accent-dim); border: 1px solid var(--accent-line); display: grid; place-items: center; color: var(--accent); font-size: 15px; flex: none; }
   .tag { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); }
+  .boot { min-height: 100vh; display: grid; place-items: center; color: var(--muted); }
+
+  /* ---------- buttons ---------- */
+  .btn { font-weight: 600; color: #07110c; background: var(--accent); border: 0; border-radius: 12px; padding: 11px 20px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: transform .15s ease, opacity .15s ease; }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:disabled { opacity: .55; cursor: not-allowed; }
+  .btn.busy { cursor: progress; }
+  .btn.block { width: 100%; }
+  .ghost { color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; transition: border-color .15s ease; }
+  .ghost:hover { border-color: var(--accent); }
+  .link { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; text-underline-offset: 3px; }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(7,17,12,.3); border-top-color: #07110c; animation: turn .7s linear infinite; }
+  @keyframes turn { to { transform: rotate(360deg); } }
+
+  /* ---------- sign in / sign up ---------- */
+  .authwrap { max-width: 460px; margin: 0 auto; padding: 28px 20px 60px; }
+  .authwrap .brand { margin-bottom: 28px; }
+  .authcard { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; animation: rise .35s ease both; }
+  .authcard h1 { font-size: 26px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 8px; }
+  .authcard .sub { color: var(--muted); margin: 0 0 20px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .field .hint { color: var(--muted); font-size: 13px; margin-top: 6px; }
+  .row { display: flex; gap: 8px; }
+  input[type="text"], input[type="password"], input[type="email"] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: inherit; }
+  input[type="text"]:focus, input[type="password"]:focus, input[type="email"]:focus, textarea:focus { outline: none; border-color: var(--accent-line); }
+  .mono { font-family: "JetBrains Mono", monospace; }
+  .showpw { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; margin-top: 8px; cursor: pointer; }
+  .switch { margin: 18px 0 0; color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+  .cerr { color: var(--danger); font-size: 14px; margin: 0 0 12px; }
+  .cerr:empty { display: none; }
+
+  /* checkbox (consent and login card) */
+  .consent { display: flex; gap: 14px; align-items: flex-start; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; cursor: pointer; transition: border-color .15s ease; font-size: 14px; }
+  .consent:hover { border-color: var(--accent-line); }
+  .consent input { appearance: none; flex: none; width: 22px; height: 22px; margin: 1px 0 0; border-radius: 6px; border: 1.5px solid var(--muted); background: transparent; display: grid; place-items: center; cursor: pointer; transition: all .15s ease; }
+  .consent input:checked { background: var(--accent); border-color: var(--accent); }
+  .consent input:checked::after { content: "✓"; color: #07110c; font-weight: 700; font-size: 14px; line-height: 1; }
+  .consent input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .consent small { display: block; color: var(--muted); margin-top: 3px; font-size: 13px; }
+
+  /* ---------- app shell ---------- */
+  .app { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 100vh; }
+  .side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 14px; background: var(--side); border-right: 1px solid var(--line); padding: 20px 14px 14px; }
+  .side-label { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 0 6px; }
+  .chatlist { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin: 0 -4px; padding: 0 4px; }
+  .chat-item { text-align: left; color: inherit; background: transparent; border: 1px solid transparent; border-radius: 12px; padding: 10px 12px; cursor: pointer; display: grid; gap: 4px; transition: background .15s ease, border-color .15s ease; }
+  .chat-item:hover, .chat-item:focus-visible { background: var(--panel); outline: none; }
+  .chat-item.active { background: var(--panel); border-color: var(--accent-line); }
+  .ci-title { font-weight: 600; font-size: 14px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .ci-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+  .chip { font-family: "JetBrains Mono", monospace; font-size: 10.5px; border-radius: 999px; padding: 1px 8px; border: 1px solid var(--line); }
+  .chip.passed { color: var(--accent); border-color: var(--accent-line); background: var(--accent-dim); }
+  .chip.not_passed { color: var(--warn); border-color: rgba(251,191,36,.4); background: var(--warn-dim); }
+  .empty { color: var(--muted); font-size: 14px; padding: 8px 6px; }
+  .side-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .who { font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+  .side-foot .ghost { white-space: nowrap; flex: none; }
+  .who b { color: var(--text); font-weight: 600; }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20; }
+  .menu { display: none; width: 40px; height: 40px; border-radius: 10px; place-items: center; font-size: 18px; padding: 0; }
+
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 20px 80px; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 24px 0 18px; }
+  .topbar .menu { margin-right: 12px; }
+  .topbar .grow { flex: 1; }
+
+  @media (max-width: 860px) {
+    .app { grid-template-columns: minmax(0, 1fr); }
+    .side { position: fixed; left: 0; top: 0; bottom: 0; width: min(86vw, 320px); z-index: 30; transform: translateX(-102%); transition: transform .25s ease; }
+    .side.open { transform: none; }
+    .menu { display: grid; }
+  }
 
   /* progress */
   .steps { display: flex; gap: 8px; margin: 0 0 36px; }
@@ -50,27 +124,17 @@
   .seg.on .lbl { color: var(--accent); }
   @media (max-width: 560px) { .seg:not(.on) .lbl { visibility: hidden; } }
 
-  h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
+  h1.big { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 12px; }
   .lead { color: var(--muted); font-size: 17px; max-width: 620px; margin: 0 0 28px; }
   .label { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 14px; }
-
-  /* consent */
-  .consent { display: flex; gap: 14px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; margin-bottom: 28px; cursor: pointer; transition: border-color .15s ease; }
-  .consent:hover { border-color: var(--accent-line); }
-  .consent input { appearance: none; flex: none; width: 22px; height: 22px; margin: 2px 0 0; border-radius: 6px; border: 1.5px solid var(--muted); background: transparent; display: grid; place-items: center; cursor: pointer; transition: all .15s ease; }
-  .consent input:checked { background: var(--accent); border-color: var(--accent); }
-  .consent input:checked::after { content: "✓"; color: #07110c; font-weight: 700; font-size: 14px; line-height: 1; }
-  .consent input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .consent b { font-weight: 600; }
-  .consent small { display: block; color: var(--muted); margin-top: 4px; font-size: 13.5px; }
-  .nudge { color: var(--warn); font-size: 14px; margin: -14px 0 20px; min-height: 20px; }
+  .nudge { color: var(--danger); font-size: 14px; margin: 0 0 14px; min-height: 0; }
+  .nudge:empty { display: none; }
 
   /* idea cards */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
-  .card { text-align: left; font: inherit; color: inherit; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; gap: 14px; align-items: flex-start; transition: transform .15s ease, border-color .15s ease, background .15s ease, opacity .2s ease; animation: rise .4s ease both; }
-  .card:hover, .card:focus-visible { background: var(--panel-hover); border-color: var(--accent-line); transform: translateY(-2px); outline: none; }
-  .card[aria-disabled="true"] { opacity: .45; }
-  .card[aria-disabled="true"]:hover { transform: none; border-color: var(--line); background: var(--panel); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .card { text-align: left; color: inherit; cursor: pointer; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; gap: 14px; align-items: flex-start; transition: transform .15s ease, border-color .15s ease, background .15s ease, opacity .2s ease; animation: rise .4s ease both; }
+  .card:hover:not(:disabled), .card:focus-visible { background: var(--panel-hover); border-color: var(--accent-line); transform: translateY(-2px); outline: none; }
+  .card:disabled { opacity: .5; cursor: progress; }
   .num { font-family: "JetBrains Mono", monospace; font-size: 13px; color: var(--accent); background: var(--accent-dim); border-radius: 8px; padding: 4px 8px; }
   .card-title { font-weight: 600; font-size: 16px; line-height: 1.35; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
@@ -80,15 +144,16 @@
   .error { background: rgba(248, 113, 113, 0.08); border: 1px solid rgba(248, 113, 113, 0.4); border-radius: 14px; padding: 18px; }
   .error strong { color: var(--danger); }
   .error code { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--muted); display: block; margin-top: 8px; word-break: break-word; }
-  .ghost { margin-top: 12px; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; cursor: pointer; }
-  .ghost:hover { border-color: var(--accent); }
+  .error .ghost { margin-top: 12px; }
 
   /* chat thread */
   .thread { display: flex; flex-direction: column; gap: 16px; }
+  .banner { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--accent-dim); border: 1px solid var(--accent-line); border-radius: 14px; padding: 12px 16px; font-size: 14px; }
+  .banner span { color: var(--muted); }
   .msg { animation: rise .35s ease both; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; max-width: 100%; }
   .msg.me { align-self: flex-end; background: var(--accent-dim); border-color: var(--accent-line); max-width: 92%; }
-  .who { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-  .msg.me .who { color: var(--accent); }
+  .who-l { font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .msg.me .who-l { color: var(--accent); }
   .msg h2 { font-size: 20px; line-height: 1.3; letter-spacing: -0.01em; margin: 0 0 12px; }
   .msg p { margin: 0 0 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .msg p:last-child { margin-bottom: 0; }
@@ -101,16 +166,9 @@
   .composer:focus-within { border-color: var(--accent-line); }
   .clabel { display: block; font-weight: 600; margin: 0 0 10px; }
   textarea { width: 100%; resize: vertical; min-height: 120px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 14px; font: inherit; line-height: 1.5; }
-  textarea:focus { outline: none; border-color: var(--accent-line); }
   textarea:disabled { opacity: .6; }
   .crow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
   .chint { color: var(--muted); font-size: 13px; }
-  .btn { font: inherit; font-weight: 600; color: #07110c; background: var(--accent); border: 0; border-radius: 12px; padding: 11px 20px; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; transition: transform .15s ease, opacity .15s ease; }
-  .btn:hover:not(:disabled) { transform: translateY(-1px); }
-  .btn:disabled { opacity: .65; cursor: progress; }
-  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(7,17,12,.3); border-top-color: #07110c; animation: turn .7s linear infinite; }
-  @keyframes turn { to { transform: rotate(360deg); } }
-  .cerr { color: var(--danger); font-size: 14px; margin-top: 10px; }
 
   /* result */
   .result { border-radius: 16px; padding: 22px; border: 1px solid var(--line); background: var(--panel); animation: rise .35s ease both; }
@@ -128,48 +186,116 @@
   .note { color: var(--warn); font-size: 14px; margin: 0 0 16px; }
   .saved { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
   .debug { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
-
   footer { margin-top: 48px; color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
+
+<div id="boot" class="boot">Loading…</div>
+
+<!-- ============ Sign up / sign in ============ -->
+<div id="auth" hidden>
+  <div class="authwrap">
     <div class="brand"><div class="logo">✓</div> Concept Check</div>
-    <div class="tag">Module 2</div>
-  </header>
 
-  <div class="steps" id="steps" aria-hidden="true"></div>
+    <div class="authcard">
+      <!-- sign up -->
+      <form id="f-signup" novalidate hidden>
+        <h1>Create your account</h1>
+        <p class="sub">So you can come back to all your chats later.</p>
 
-  <!-- Screen 1: consent + pick an idea -->
-  <section id="pick">
-    <h1>Do you understand it, or can you just recite it?</h1>
-    <p class="lead">Pick one idea from Module 2 and explain it in your own words. We will find the sentence where understanding turns into a phrase, ask one question about it, and give you a new case to try.</p>
+        <div class="field">
+          <label for="su-email">Email</label>
+          <input id="su-email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="you@example.com">
+          <div class="hint">Only used to sign in. We do not send you any email.</div>
+        </div>
 
-    <label class="consent">
-      <input type="checkbox" id="consent">
-      <span><b>I agree that my answers are recorded.</b>
-        <small>No name is asked or saved. The check works from your saved answers, so it can't run without this.</small></span>
-    </label>
-    <div class="nudge" id="nudge" role="status"></div>
+        <div class="field">
+          <label for="su-pass">Password</label>
+          <input id="su-pass" type="password" autocomplete="new-password" maxlength="128">
+          <label class="showpw"><input type="checkbox" data-show="su-pass"> Show password</label>
+          <div class="hint">At least 8 characters. Password reset is not available yet, so please remember it.</div>
+        </div>
 
-    <div class="label">Pick an idea</div>
-    <div id="ideas" class="grid" aria-live="polite"></div>
-  </section>
+        <label class="consent">
+          <input type="checkbox" id="su-consent">
+          <span>I agree that my answers are recorded and saved under my account.
+            <small>Only your email and a scrambled version of your password are stored about you.</small></span>
+        </label>
 
-  <!-- Screens 2 to 5: the guided chat -->
-  <section id="chat" hidden>
-    <div id="thread" class="thread" aria-live="polite"></div>
-    <div id="composer" class="composer" hidden></div>
-  </section>
+        <div class="cerr" id="su-err" role="alert"></div>
+        <button class="btn block" type="submit">Create my account</button>
+        <div class="switch"><span>Already have an account? <button type="button" class="link" data-go="login">Sign in</button></span></div>
+      </form>
 
-  <footer>Your explanation and answers are saved without your name.</footer>
+      <!-- sign in -->
+      <form id="f-login" novalidate hidden>
+        <h1>Welcome back</h1>
+        <p class="sub">Sign in to see your past chats.</p>
+        <div class="field">
+          <label for="li-email">Email</label>
+          <input id="li-email" type="email" autocomplete="email" autocapitalize="none" spellcheck="false" maxlength="254" placeholder="you@example.com">
+        </div>
+        <div class="field">
+          <label for="li-pass">Password</label>
+          <input id="li-pass" type="password" autocomplete="current-password" maxlength="128">
+          <label class="showpw"><input type="checkbox" data-show="li-pass"> Show password</label>
+        </div>
+        <div class="cerr" id="li-err" role="alert"></div>
+        <button class="btn block" type="submit">Sign in</button>
+        <div class="switch"><span>New here? <button type="button" class="link" data-go="signup">Create an account</button></span></div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ The app ============ -->
+<div id="app" class="app" hidden>
+  <aside id="side" class="side" aria-label="Your chats">
+    <div class="brand"><div class="logo">✓</div> Concept Check</div>
+    <button class="btn block" id="newchat" type="button">+ New chat</button>
+    <div class="side-label">Your chats</div>
+    <nav id="chatlist" class="chatlist"></nav>
+    <div class="side-foot">
+      <span class="who" id="who"></span>
+      <button class="ghost" id="signout" type="button">Sign out</button>
+    </div>
+  </aside>
+  <div id="scrim" class="scrim" hidden></div>
+
+  <main>
+    <div class="wrap">
+      <div class="topbar">
+        <button class="ghost menu" id="menu" type="button" aria-label="Open your chats">☰</button>
+        <div class="grow"></div>
+        <div class="tag">Module 2</div>
+      </div>
+
+      <div class="steps" id="steps" aria-hidden="true"></div>
+
+      <section id="pick">
+        <h1 class="big">Do you understand it, or can you just recite it?</h1>
+        <p class="lead">Pick one idea from Module 2 and explain it in your own words. We will find the sentence where understanding turns into a phrase, ask one question about it, and give you a new case to try.</p>
+        <div class="nudge" id="nudge" role="status"></div>
+        <div class="label">Pick an idea</div>
+        <div id="ideas" class="grid" aria-live="polite"></div>
+      </section>
+
+      <section id="chat" hidden>
+        <div id="thread" class="thread" aria-live="polite"></div>
+        <div id="composer" class="composer" hidden></div>
+      </section>
+
+      <footer>Your explanation and answers are saved under your account only.</footer>
+    </div>
+  </main>
 </div>
 
 <script>
 const DEBUG = new URLSearchParams(location.search).has("debug");
 const STEPS = ["Pick", "Explain", "Follow-up", "New case", "Result"];
-const S = { session: null, gap: null, caseId: null, busy: false };
+const S = { token: "", user: "", session: null, gap: null, caseId: null, active: null, chats: [], busy: false };
+const STATUS = { passed: "Passed", not_passed: "Not passed", no_case: "No new case", unfinished: "Unfinished" };
 
 const $ = (id) => document.getElementById(id);
 function el(tag, cls, text) {
@@ -178,21 +304,218 @@ function el(tag, cls, text) {
   if (text !== undefined) n.textContent = text;
   return n;
 }
+function keep(key, value) {   // browser storage can be blocked: never let that break the page
+  try { if (value === undefined) return localStorage.getItem(key) || ""; value ? localStorage.setItem(key, value) : localStorage.removeItem(key); } catch (e) { /* ignore */ }
+  return "";
+}
 
 /* ---------- server calls ---------- */
 async function api(path, body) {
-  const opt = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : {};
+  const headers = {};
+  if (body) headers["Content-Type"] = "application/json";
+  if (S.token) headers["Authorization"] = "Bearer " + S.token;
+  const opt = { headers };
+  if (body) { opt.method = "POST"; opt.body = JSON.stringify(body); }
   let r;
   try { r = await fetch(path, opt); }
   catch (e) { throw new Error("Could not reach the server. Check your connection and try again."); }
   let data = null;
   try { data = await r.json(); } catch (e) { /* not JSON */ }
+  if (r.status === 401 && S.token) {
+    signOut("Your sign-in ended. Please sign in again.");
+    throw new Error("Please sign in again.");
+  }
   if (!r.ok) {
     const d = data && data.detail;
     throw new Error(typeof d === "string" ? d : "Something went wrong (" + r.status + "). Please try again.");
   }
   if (data && data.detail === "no route matched") throw new Error("The server did not recognise that request.");
   return data;
+}
+
+/* =====================================================================
+   SIGN UP / SIGN IN
+   ===================================================================== */
+const EMAIL_OK = /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/;
+
+function showAuth(mode, note) {
+  $("boot").hidden = true;
+  $("app").hidden = true;
+  $("auth").hidden = false;
+  ["signup", "login"].forEach((m) => { $("f-" + m).hidden = m !== mode; });
+  document.querySelectorAll(".cerr").forEach((e) => { e.textContent = ""; });
+  if (note && mode === "login") $("li-err").textContent = note;
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => showAuth(b.dataset.go)));
+document.querySelectorAll("[data-show]").forEach((c) => c.addEventListener("change", () => { $(c.dataset.show).type = c.checked ? "text" : "password"; }));
+
+function formSubmit(form, errBox, label, work) {
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    const btn = form.querySelector("button[type=submit]");
+    if (btn.disabled) return;
+    errBox.textContent = "";
+    btn.disabled = true; btn.classList.add("busy");
+    btn.textContent = "";
+    btn.append(el("span", "spin"), document.createTextNode("Please wait…"));
+    try { await work(); }
+    catch (e) { errBox.textContent = e.message; }
+    finally { btn.disabled = false; btn.classList.remove("busy"); btn.textContent = label; }
+  });
+}
+
+function needFields(...pairs) {
+  for (const [value, msg] of pairs) if (!value.trim()) throw new Error(msg);
+}
+
+formSubmit($("f-signup"), $("su-err"), "Create my account", async () => {
+  const email = $("su-email").value.trim().toLowerCase();
+  const password = $("su-pass").value;
+  needFields([email, "Please type your email."], [password, "Please choose a password."]);
+  if (!EMAIL_OK.test(email)) throw new Error("Please enter a valid email address.");
+  if (password.length < 8) throw new Error("Password must be at least 8 characters.");
+  if (!$("su-consent").checked) throw new Error("Please tick the box to agree that your answers are recorded.");
+  const r = await api("/api/signup", { email, password, consent: true });
+  $("su-pass").value = "";
+  enter(r.token, r.email);
+});
+
+formSubmit($("f-login"), $("li-err"), "Sign in", async () => {
+  const email = $("li-email").value.trim().toLowerCase();
+  const password = $("li-pass").value;
+  needFields([email, "Please type your email."], [password, "Please type your password."]);
+  const r = await api("/api/login", { email, password });
+  $("li-pass").value = "";
+  enter(r.token, r.email);
+});
+
+/* ---------- entering and leaving ---------- */
+function enter(token, email) {
+  S.token = token; S.user = email;
+  keep("cc_token", token);
+  $("auth").hidden = true;
+  $("boot").hidden = true;
+  $("app").hidden = false;
+  $("who").textContent = "";
+  $("who").append("Signed in as ", Object.assign(el("b"), { textContent: email }));
+  newChat();
+  refreshChats();
+}
+
+function signOut(note) {
+  S.token = ""; S.user = ""; S.session = S.gap = S.caseId = S.active = null; S.chats = [];
+  keep("cc_token", "");
+  closeDrawer();
+  $("thread").innerHTML = "";
+  hideComposer();
+  showAuth("login", note);
+}
+$("signout").addEventListener("click", () => signOut());
+
+/* =====================================================================
+   THE APP: chat list, new chat, replay
+   ===================================================================== */
+function openDrawer() { $("side").classList.add("open"); $("scrim").hidden = false; }
+function closeDrawer() { $("side").classList.remove("open"); $("scrim").hidden = true; }
+$("menu").addEventListener("click", openDrawer);
+$("scrim").addEventListener("click", closeDrawer);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+$("newchat").addEventListener("click", () => { newChat(); closeDrawer(); });
+
+function when(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  return d.toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+async function refreshChats() {
+  try { S.chats = await api("/api/chats"); } catch (e) { return; }
+  renderChats();
+}
+
+function renderChats() {
+  const nav = $("chatlist");
+  nav.innerHTML = "";
+  if (!S.chats.length) { nav.append(el("div", "empty", "No chats yet. Each time you explain an idea, it shows up here.")); return; }
+  S.chats.forEach((c) => {
+    const b = el("button", "chat-item" + (c.id === S.active ? " active" : ""));
+    b.type = "button";
+    const meta = el("span", "ci-meta");
+    meta.append(el("span", "chip " + c.status, STATUS[c.status] || c.status), el("span", "", when(c.started_at)));
+    b.append(el("span", "ci-title", c.title), meta);
+    b.onclick = () => { openChat(c.id); closeDrawer(); };
+    nav.append(b);
+  });
+}
+
+function view(name) {   // "pick" | "chat" | "replay"
+  $("pick").hidden = name !== "pick";
+  $("chat").hidden = name === "pick";
+  $("steps").hidden = name === "replay";
+}
+
+function newChat() {
+  S.session = S.gap = S.caseId = S.active = null;
+  $("thread").innerHTML = "";
+  hideComposer();
+  $("nudge").textContent = "";
+  view("pick");
+  setStep(0);
+  renderChats();
+  loadIdeas();
+  window.scrollTo({ top: 0 });
+}
+
+async function openChat(id) {
+  if (S.busy) return;
+  S.busy = true;
+  try {
+    const d = await api("/api/chats/" + encodeURIComponent(id));
+    S.active = id;
+    renderChats();
+    renderReplay(d);
+  } catch (e) {
+    if (S.token) alert(e.message);
+  } finally { S.busy = false; }
+}
+
+function renderReplay(d) {
+  view("replay");
+  hideComposer();
+  const t = $("thread");
+  t.innerHTML = "";
+  const banner = el("div", "banner");
+  banner.append(el("span", "", "A past chat from " + when(d.started_at) + ". You are only viewing it."));
+  const again = el("button", "ghost", "Start a new chat");
+  again.type = "button";
+  again.onclick = newChat;
+  banner.append(again);
+  t.append(banner);
+
+  const m0 = msg("Your idea");
+  m0.append(el("h2", "", d.title), el("div", "situation", d.situation));
+  d.steps.forEach((s) => {
+    if (s.kind === "explanation") {
+      msg("You", true).append(el("p", "", s.text));
+      if (s.sentence) msg("The sentence to look at again").append(el("div", "quote", s.sentence));
+      if (s.follow_up) msg("One question about it").append(el("p", "ask", s.follow_up));
+    } else if (s.kind === "second_try") {
+      msg("You", true).append(el("p", "", s.text));
+    } else {
+      const c = msg("A new case");
+      c.append(el("div", "situation", s.case));
+      msg("You", true).append(el("p", "", s.text));
+      t.append(resultCard({ passed: s.passed, total: s.total, found_count: s.found.length, found: s.found, blocked: false }));
+    }
+  });
+  if (!d.steps.some((s) => s.kind === "new_case")) {
+    const n = el("div", "result");
+    n.append(el("h2", "", d.status === "no_case" ? "No new case was answered in this chat" : "This chat stopped before the second try"),
+             el("p", "count", "Everything above was saved. Start a new chat to try again."));
+    t.append(n);
+  }
+  window.scrollTo({ top: 0 });
 }
 
 /* ---------- progress bar ---------- */
@@ -206,7 +529,7 @@ function setStep(n) {
   });
 }
 
-/* ---------- screen 1: consent + ideas ---------- */
+/* ---------- pick an idea ---------- */
 function showLoading() {
   $("ideas").innerHTML = Array.from({ length: 6 }, () => '<div class="skeleton"></div>').join("");
 }
@@ -219,6 +542,7 @@ function showError(box, err, retry) {
            document.createTextNode("Check your connection and try again."));
   d.append(el("code", "", String(err.message || err)));
   const b = el("button", "ghost", "Try again");
+  b.type = "button";
   b.onclick = retry;
   d.append(b);
   box.append(d);
@@ -229,9 +553,9 @@ function renderIdeas(ideas) {
   box.innerHTML = "";
   ideas.forEach((idea, i) => {
     const b = el("button", "card");
+    b.type = "button";
     b.style.animationDelay = (i * 50) + "ms";
     b.append(el("span", "num", String(i + 1).padStart(2, "0")), el("span", "card-title", idea.title));
-    b.setAttribute("aria-disabled", String(!$("consent").checked));
     b.onclick = () => pickIdea(idea);
     box.append(b);
   });
@@ -243,30 +567,18 @@ async function loadIdeas() {
     const data = await api("/api/ideas");
     if (!Array.isArray(data)) throw new Error("Unexpected reply from the server");
     renderIdeas(data);
-  } catch (e) { showError($("ideas"), e, loadIdeas); }
+  } catch (e) { if (S.token) showError($("ideas"), e, loadIdeas); }
 }
-
-$("consent").addEventListener("change", () => {
-  const on = $("consent").checked;
-  $("nudge").textContent = "";
-  document.querySelectorAll("#ideas .card").forEach((c) => c.setAttribute("aria-disabled", String(!on)));
-});
 
 async function pickIdea(idea) {
   if (S.busy) return;
-  if (!$("consent").checked) {
-    $("nudge").textContent = "Tick the box above first, so we can record your answers.";
-    $("consent").focus();
-    return;
-  }
   S.busy = true;
-  document.querySelectorAll("#ideas .card").forEach((c) => c.setAttribute("aria-disabled", "true"));
-  $("nudge").textContent = "Starting…";
+  document.querySelectorAll("#ideas .card").forEach((c) => { c.disabled = true; });
+  $("nudge").textContent = "";
   try {
-    const s = await api("/api/session", { idea_id: idea.id, consent: true });
+    const s = await api("/api/session", { idea_id: idea.id });
     S.session = s.session_id;
-    $("pick").hidden = true;
-    $("chat").hidden = false;
+    view("chat");
     $("thread").innerHTML = "";
     debug("session", s);
     setStep(1);
@@ -276,22 +588,21 @@ async function pickIdea(idea) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (e) {
     $("nudge").textContent = e.message;
-    document.querySelectorAll("#ideas .card").forEach((c) => c.setAttribute("aria-disabled", "false"));
+    document.querySelectorAll("#ideas .card").forEach((c) => { c.disabled = false; });
   } finally { S.busy = false; }
 }
 
 /* ---------- chat helpers ---------- */
 function msg(who, me) {
   const m = el("div", "msg" + (me ? " me" : ""));
-  m.append(el("div", "who", who));
+  m.append(el("div", "who-l", who));
   $("thread").append(m);
   return m;
 }
 
 function debug(name, data) {
   if (!DEBUG) return;
-  const m = el("div", "debug", name + " → " + JSON.stringify(data, null, 2));
-  $("thread").append(m);
+  $("thread").append(el("div", "debug", name + " → " + JSON.stringify(data, null, 2)));
 }
 
 function composer(cfg) {
@@ -304,22 +615,23 @@ function composer(cfg) {
   const ta = el("textarea");
   ta.id = "ans"; ta.placeholder = cfg.placeholder; ta.maxLength = 4000;
   const err = el("div", "cerr");
-  err.hidden = true; err.setAttribute("role", "alert");
+  err.setAttribute("role", "alert");
   const row = el("div", "crow");
   const btn = el("button", "btn", cfg.button);
+  btn.type = "button";
   row.append(el("span", "chint", "Ctrl + Enter to send"), btn);
 
   async function go() {
     if (btn.disabled) return;
     const v = ta.value.trim();
-    err.hidden = true;
-    if (v.length < cfg.min) { err.textContent = cfg.short; err.hidden = false; ta.focus(); return; }
+    err.textContent = "";
+    if (v.length < cfg.min) { err.textContent = cfg.short; ta.focus(); return; }
     btn.disabled = true; ta.disabled = true;
     btn.textContent = "";
     btn.append(el("span", "spin"), document.createTextNode(cfg.busy));
     try { await cfg.onSubmit(v); }
     catch (e) {
-      err.textContent = e.message; err.hidden = false;
+      err.textContent = e.message;
       btn.disabled = false; ta.disabled = false; btn.textContent = cfg.button; ta.focus();
     }
   }
@@ -332,7 +644,7 @@ function composer(cfg) {
 
 function hideComposer() { $("composer").hidden = true; $("composer").innerHTML = ""; }
 
-/* ---------- screen 2: explain ---------- */
+/* ---------- explain ---------- */
 function askExplain() {
   composer({
     label: "Your explanation", placeholder: "Write it the way you would explain it to a friend…",
@@ -342,18 +654,18 @@ function askExplain() {
       const r = await api("/api/explain", { session_id: S.session, text });
       debug("explain", r);
       S.gap = r.gap_id;
+      S.active = S.session;
+      refreshChats();
       msg("You", true).append(el("p", "", text));
       setStep(2);
-      const q = msg("The sentence to look at again");
-      q.append(el("div", "quote", r.sentence));
-      const f = msg("One question about it");
-      f.append(el("p", "ask", r.follow_up));
+      msg("The sentence to look at again").append(el("div", "quote", r.sentence));
+      msg("One question about it").append(el("p", "ask", r.follow_up));
       askSecond();
     },
   });
 }
 
-/* ---------- screen 3: follow-up and second try ---------- */
+/* ---------- follow-up and second try ---------- */
 function askSecond() {
   composer({
     label: "Your second try", placeholder: "Take another go, using that question…",
@@ -362,6 +674,7 @@ function askSecond() {
     onSubmit: async (text) => {
       const r = await api("/api/second-try", { session_id: S.session, gap_id: S.gap, text });
       debug("second-try", r);
+      refreshChats();
       msg("You", true).append(el("p", "", text));
       if (!r.case) { hideComposer(); finish(null); return; }
       S.caseId = r.case_id;
@@ -373,7 +686,7 @@ function askSecond() {
   });
 }
 
-/* ---------- screen 4: the new case ---------- */
+/* ---------- the new case ---------- */
 function askAnswer() {
   composer({
     label: "Your answer to the new case", placeholder: "What is going on here, and what would you do?",
@@ -385,54 +698,61 @@ function askAnswer() {
       msg("You", true).append(el("p", "", text));
       hideComposer();
       finish(r);
+      refreshChats();
     },
   });
 }
 
-/* ---------- screen 5: result ---------- */
+/* ---------- result ---------- */
+function resultCard(r) {
+  const card = el("div", "result " + (r.passed ? "pass" : "fail"));
+  card.append(el("span", "badge", r.passed ? "Passed" : "Not passed this time"),
+              el("h2", "", r.passed ? "You worked out a case you had not seen." : "Your answer did not cover everything this case needed."),
+              el("p", "count", "Ideas found in your answer: " + r.found_count + " of " + r.total));
+  if (r.found.length) {
+    const ul = el("ul", "found");
+    r.found.forEach((f) => {
+      const li = el("li");
+      li.append(el("div", "idea", f.idea), el("div", "ev", "You wrote: “" + f.evidence + "”"));
+      ul.append(li);
+    });
+    card.append(ul);
+  }
+  if (r.blocked) card.append(el("p", "note", "Part of your answer gave a common wrong reason as the main cause."));
+  return card;
+}
+
 function finish(r) {
   setStep(4);
-  const card = el("div", "result" + (r ? (r.passed ? " pass" : " fail") : ""));
-  if (!r) {
+  let card;
+  if (r) card = resultCard(r);
+  else {
+    card = el("div", "result");
     card.append(el("h2", "", "No more new cases for this idea"),
-                el("p", "count", "Your explanation and second try are saved. Try a different idea to see a new case."));
-  } else {
-    card.append(el("span", "badge", r.passed ? "Passed" : "Not passed this time"),
-                el("h2", "", r.passed ? "You worked out a case you had not seen." : "Your answer did not cover everything this case needed."),
-                el("p", "count", "Ideas found in your answer: " + r.found_count + " of " + r.total));
-    if (r.found.length) {
-      const ul = el("ul", "found");
-      r.found.forEach((f) => {
-        const li = el("li");
-        li.append(el("div", "idea", f.idea), el("div", "ev", "You wrote: “" + f.evidence + "”"));
-        ul.append(li);
-      });
-      card.append(ul);
-    }
-    if (r.blocked) card.append(el("p", "note", "Part of your answer gave a common wrong reason as the main cause."));
+                el("p", "count", "Your explanation and second try are saved. Start a new chat with a different idea to see a new case."));
   }
-  const again = el("button", "ghost", "Try another idea");
-  again.onclick = restart;
-  card.append(again, el("p", "saved", "Saved without your name."));
+  const again = el("button", "ghost", "Start a new chat");
+  again.type = "button";
+  again.onclick = newChat;
+  card.append(again, el("p", "saved", "Saved in your chat list on the left."));
   $("thread").append(card);
   card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function restart() {
-  S.session = S.gap = S.caseId = null;
-  $("chat").hidden = true;
-  $("thread").innerHTML = "";
-  hideComposer();
-  $("pick").hidden = false;
-  $("consent").checked = false;
-  $("nudge").textContent = "";
-  setStep(0);
-  loadIdeas();
-  window.scrollTo({ top: 0, behavior: "smooth" });
-}
-
-setStep(0);
-loadIdeas();
+/* =====================================================================
+   START: are we already signed in?
+   ===================================================================== */
+(async function boot() {
+  const saved = keep("cc_token");
+  if (!saved) { showAuth("signup"); return; }
+  S.token = saved;
+  try {
+    const me = await api("/api/me");
+    enter(saved, me.email);
+  } catch (e) {
+    if (S.token) { S.token = ""; showAuth("login", e.message); }   // could not check (offline?): the saved sign-in is kept
+  }
+})();
 </script>
 </body>
 </html>

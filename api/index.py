@@ -1,12 +1,18 @@
+import hashlib
+import hmac
 import json
+import math
 import os
 import random
 import re
+import secrets
+import time
 import uuid
+from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs
 
 import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
@@ -14,6 +20,11 @@ app = FastAPI()
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
 MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 IDEA_ORDER = ["backend", "api-call", "key-browser", "storage", "pointer", "history", "placement"]
+
+TOKEN_DAYS = 30
+MAX_FAILS = 5          # wrong passwords in a row before a short lock
+LOCK_MINUTES = 5
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
 
 # ---------------------------------------------------------------------------
 # What the AI is asked to do. It never judges understanding: it only finds a
@@ -60,6 +71,8 @@ def _sb(method, table, params=None, body=None):
         headers["Authorization"] = f"Bearer {key}"
     if method == "POST":
         headers["Prefer"] = "return=representation"
+    elif method == "PATCH":
+        headers["Prefer"] = "return=minimal"
     try:
         r = requests.request(method, f"{base}/rest/v1/{table}", headers=headers,
                              params=params, json=body, timeout=15)
@@ -67,17 +80,33 @@ def _sb(method, table, params=None, body=None):
         raise HTTPException(502, f"Database not reachable ({type(e).__name__})")
     if r.status_code >= 300:
         raise HTTPException(502, f"Database error {r.status_code}: {r.text[:200]}")
-    return r.json()
+    return r.json() if r.content else None
 
 
-def sb_select(table, **eq):
+def sb_select(table, _order=None, **eq):
     params = {"select": "*"}
     params.update({k: f"eq.{v}" for k, v in eq.items()})
+    if _order:
+        params["order"] = _order
+    return _sb("GET", table, params=params)
+
+
+def sb_select_in(table, column, values, _order=None):
+    values = list(values)
+    if not values:
+        return []
+    params = {"select": "*", column: "in.(" + ",".join(str(v) for v in values) + ")"}
+    if _order:
+        params["order"] = _order
     return _sb("GET", table, params=params)
 
 
 def sb_insert(table, row):
     return _sb("POST", table, body=row)[0]
+
+
+def sb_update(table, row_id, fields):
+    _sb("PATCH", table, params={"id": f"eq.{row_id}"}, body=fields)
 
 
 def call_llm(system, user):
@@ -112,15 +141,157 @@ def clean_id(value):
         raise HTTPException(400, "That id is not valid")
 
 
-def get_session(session_id):
+def yes(value):
+    return value is True or str(value).strip().lower() == "true"
+
+
+# ---------------------------------------------------------------------------
+# Accounts: hashed passwords, signed tokens, a short lock after wrong tries
+# ---------------------------------------------------------------------------
+
+PBKDF2_ROUNDS = 210_000
+
+
+def hash_secret(value):
+    salt = secrets.token_bytes(16)
+    digest = hashlib.pbkdf2_hmac("sha512", value.encode(), salt, PBKDF2_ROUNDS)
+    return f"pbkdf2${PBKDF2_ROUNDS}${salt.hex()}${digest.hex()}"
+
+
+def check_secret(value, stored):
+    try:
+        kind, rounds, salt, digest = str(stored).split("$")
+        if kind != "pbkdf2":
+            return False
+        probe = hashlib.pbkdf2_hmac("sha512", value.encode(), bytes.fromhex(salt), int(rounds))
+    except (ValueError, TypeError):
+        return False
+    return hmac.compare_digest(probe.hex(), digest)
+
+
+_DUMMY = []
+
+
+def burn_time():
+    """Unknown emails take as long as known ones, so timing does not reveal who has an account."""
+    if not _DUMMY:
+        _DUMMY.append(hash_secret("not-a-real-password"))
+    check_secret("x", _DUMMY[0])
+
+
+def _token_key():
+    # Derived from the secret database key, so no extra setting is needed in Vercel.
+    return hashlib.sha256(b"concept-check-auth:" + _env("SUPABASE_SERVICE_KEY").encode()).digest()
+
+
+def _fingerprint(password_hash):
+    return hashlib.sha256(str(password_hash).encode()).hexdigest()[:12]
+
+
+def make_token(user):
+    payload = f"{user['id']}.{int(time.time()) + TOKEN_DAYS * 86400}.{_fingerprint(user['password_hash'])}"
+    sig = hmac.new(_token_key(), payload.encode(), hashlib.sha256).hexdigest()
+    return f"{payload}.{sig}"
+
+
+def read_token(token):
+    """Returns (user_id, fingerprint) for a good token, else None."""
+    try:
+        uid, exp, fp, sig = str(token).split(".")
+        good = hmac.new(_token_key(), f"{uid}.{exp}.{fp}".encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, good) or int(exp) < time.time():
+            return None
+    except ValueError:
+        return None
+    return uid, fp
+
+
+def current_user(authorization: str = Header(default="")):
+    token = authorization[7:].strip() if authorization.lower().startswith("bearer ") else ""
+    parsed = read_token(token)
+    if not parsed:
+        raise HTTPException(401, "Please sign in")
+    user = first(sb_select("users", id=parsed[0]))
+    # Changing the password changes the fingerprint, so older tokens stop working.
+    if not user or _fingerprint(user["password_hash"]) != parsed[1]:
+        raise HTTPException(401, "Please sign in again")
+    return user
+
+
+def _lock_left(user):
+    raw = user.get("locked_until")
+    if not raw:
+        return 0
+    try:
+        until = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+    except ValueError:
+        return 0
+    if until.tzinfo is None:
+        until = until.replace(tzinfo=timezone.utc)
+    return max(0, int((until - datetime.now(timezone.utc)).total_seconds()))
+
+
+def _refuse_if_locked(user):
+    left = _lock_left(user)
+    if left:
+        raise HTTPException(429, f"Too many wrong tries. Please wait {max(1, math.ceil(left / 60))} minute(s) and try again.")
+
+
+def _fail(user, message):
+    n = int(user.get("failed_logins") or 0) + 1
+    if n >= MAX_FAILS:
+        until = (datetime.now(timezone.utc) + timedelta(minutes=LOCK_MINUTES)).isoformat()
+        sb_update("users", user["id"], {"failed_logins": 0, "locked_until": until})
+        raise HTTPException(429, f"Too many wrong tries. Please wait {LOCK_MINUTES} minutes and try again.")
+    sb_update("users", user["id"], {"failed_logins": n})
+    raise HTTPException(401, message)
+
+
+def _forgive(user):
+    if user.get("failed_logins") or user.get("locked_until"):
+        sb_update("users", user["id"], {"failed_logins": 0, "locked_until": None})
+
+
+def clean_email(value):
+    mail = str(value).strip().lower()
+    if len(mail) > 254 or not EMAIL_RE.match(mail):
+        raise HTTPException(400, "Please enter a valid email address")
+    return mail
+
+
+def check_password(value):
+    if not 8 <= len(str(value)) <= 128:
+        raise HTTPException(400, "Password must be 8 to 128 characters")
+    return str(value)
+
+
+# ---------------------------------------------------------------------------
+# Chat helpers
+# ---------------------------------------------------------------------------
+
+
+def owned_session(session_id, user):
     sess = first(sb_select("sessions", id=session_id))
-    if not sess:
-        raise HTTPException(404, "Session not found")
+    # A chat with no owner (old tests) or another owner looks like it does not exist.
+    if not sess or sess.get("user_id") != user["id"]:
+        raise HTTPException(404, "Chat not found")
     return sess
 
 
-def yes(value):
-    return value is True or str(value).strip().lower() == "true"
+KIND_ORDER = {"explanation": 0, "second_try": 1, "new_case": 2}
+
+
+def ordered(attempts):
+    return sorted(attempts, key=lambda a: (KIND_ORDER.get(a["kind"], 9), str(a.get("created_at", ""))))
+
+
+def chat_status(attempts):
+    news = [a for a in attempts if a["kind"] == "new_case"]
+    if news:
+        return "passed" if news[-1].get("passed") else "not_passed"
+    if any(a["kind"] == "second_try" for a in attempts):
+        return "no_case"
+    return "unfinished"
 
 
 def find_gap(idea, explanation):
@@ -142,9 +313,19 @@ def find_gap(idea, explanation):
 # ---------------------------------------------------------------------------
 
 
+class SignupIn(BaseModel):
+    email: str
+    password: str
+    consent: bool = False
+
+
+class LoginIn(BaseModel):
+    email: str
+    password: str
+
+
 class SessionIn(BaseModel):
     idea_id: str
-    consent: bool = False
 
 
 class ExplainIn(BaseModel):
@@ -165,7 +346,7 @@ class AnswerIn(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Routes: open ones first (health, ideas, sign up / in / reset)
 # ---------------------------------------------------------------------------
 
 
@@ -178,6 +359,10 @@ def health():
             out["db"] = {"ideas": len(sb_select("ideas")), "golden_pairs": len(sb_select("golden_pairs"))}
         except HTTPException as e:
             out["db"] = {"error": e.detail}
+        try:
+            out["db"]["users_table"] = isinstance(sb_select("users"), list)
+        except HTTPException:
+            out["db"]["users_table"] = False   # the add_users.sql step has not been run yet
     return out
 
 
@@ -188,27 +373,111 @@ def ideas():
     return [{"id": r["id"], "title": r["title"]} for r in rows]
 
 
-@app.post("/api/session")
-def start_session(body: SessionIn):
+@app.post("/api/signup")
+def signup(body: SignupIn):
+    mail = clean_email(body.email)
+    password = check_password(body.password)
     if not body.consent:
-        raise HTTPException(400, "Consent is needed to record your answers")
+        raise HTTPException(400, "Please tick the box to agree that your answers are recorded")
+    taken = "That email already has an account. Try signing in instead."
+    if first(sb_select("users", email=mail)):
+        raise HTTPException(409, taken)
+    try:
+        user = sb_insert("users", {"email": mail, "password_hash": hash_secret(password)})
+    except HTTPException as e:
+        if "23505" in str(e.detail) or "duplicate" in str(e.detail).lower():
+            raise HTTPException(409, taken)
+        raise
+    return {"token": make_token(user), "email": mail}
+
+
+@app.post("/api/login")
+def login(body: LoginIn):
+    mail = str(body.email).strip().lower()
+    user = first(sb_select("users", email=mail)) if EMAIL_RE.match(mail) and len(mail) <= 254 else None
+    if not user:
+        burn_time()
+        raise HTTPException(401, "Wrong email or password")
+    _refuse_if_locked(user)
+    if not check_secret(str(body.password), user["password_hash"]):
+        _fail(user, "Wrong email or password")
+    _forgive(user)
+    return {"token": make_token(user), "email": user["email"]}
+
+
+# ---------------------------------------------------------------------------
+# Routes that need a signed-in user
+# ---------------------------------------------------------------------------
+
+
+@app.get("/api/me")
+def me(user: dict = Depends(current_user)):
+    return {"email": user["email"]}
+
+
+@app.get("/api/chats")
+def chats(user: dict = Depends(current_user)):
+    sessions = sb_select("sessions", _order="started_at.desc", user_id=user["id"])[:100]
+    by_session = {}
+    for a in sb_select_in("attempts", "session_id", [s["id"] for s in sessions]):
+        by_session.setdefault(a["session_id"], []).append(a)
+    titles = {i["id"]: i["title"] for i in sb_select("ideas")}
+    out = []
+    for s in sessions:
+        atts = by_session.get(s["id"], [])
+        if not atts:
+            continue   # picked an idea but never answered: nothing to show
+        out.append({"id": s["id"], "title": titles.get(s["idea_id"], s["idea_id"]),
+                    "started_at": s["started_at"], "status": chat_status(atts)})
+    return out
+
+
+@app.get("/api/chats/{session_id}")
+def chat_replay(session_id: str, user: dict = Depends(current_user)):
+    sid = clean_id(session_id)
+    sess = owned_session(sid, user)
+    idea = first(sb_select("ideas", id=sess["idea_id"]))
+    atts = ordered(sb_select("attempts", session_id=sid))
+    gaps = {g["attempt_id"]: g for g in sb_select_in("gaps", "attempt_id", [a["id"] for a in atts if a["kind"] == "explanation"])}
+    steps = []
+    for a in atts:
+        if a["kind"] == "explanation":
+            g = gaps.get(a["id"], {})
+            steps.append({"kind": "explanation", "text": a["text"],
+                          "sentence": g.get("quoted_sentence", ""), "follow_up": g.get("follow_up", "")})
+        elif a["kind"] == "second_try":
+            steps.append({"kind": "second_try", "text": a["text"]})
+        else:
+            pair = first(sb_select("golden_pairs", id=a.get("golden_pair_id"))) or {}
+            detail = a.get("key_ideas_found") or []
+            # Same privacy as the live result: only ideas the learner actually found are shown.
+            steps.append({"kind": "new_case", "case": pair.get("case_text", ""), "text": a["text"],
+                          "passed": bool(a.get("passed")), "total": len(detail),
+                          "found": [{"idea": d["idea"], "evidence": d.get("evidence", "")} for d in detail if d.get("found")]})
+    return {"id": sid, "title": idea["title"] if idea else sess["idea_id"], "situation": idea["opening_situation"] if idea else "",
+            "started_at": sess["started_at"], "status": chat_status(atts), "steps": steps}
+
+
+@app.post("/api/session")
+def start_session(body: SessionIn, user: dict = Depends(current_user)):
     idea = first(sb_select("ideas", id=body.idea_id))
     if not idea:
         raise HTTPException(404, "Unknown idea")
-    row = sb_insert("sessions", {"idea_id": idea["id"], "consent": True})
+    # Consent was given once at sign-up, so every chat of this user is recorded with consent.
+    row = sb_insert("sessions", {"idea_id": idea["id"], "user_id": user["id"], "consent": True})
     return {"session_id": row["id"], "title": idea["title"],
             "question": idea["opening_question"], "situation": idea["opening_situation"]}
 
 
 @app.post("/api/explain")
-def explain(body: ExplainIn):
+def explain(body: ExplainIn, user: dict = Depends(current_user)):
     sid = clean_id(body.session_id)
-    sess = get_session(sid)
+    sess = owned_session(sid, user)
     text = body.text.strip()
     if len(text) < 15:
         raise HTTPException(400, "Please write a little more, in your own words")
     if any(a["kind"] == "explanation" for a in sb_select("attempts", session_id=sid)):
-        raise HTTPException(409, "You already explained this idea in this session")
+        raise HTTPException(409, "You already explained this idea in this chat")
     idea = first(sb_select("ideas", id=sess["idea_id"]))
     # The AI runs first, so a failed AI call saves nothing and the learner can just retry.
     sentence, follow_up, fallback = find_gap(idea, text)
@@ -218,17 +487,17 @@ def explain(body: ExplainIn):
 
 
 @app.post("/api/second-try")
-def second_try(body: SecondTryIn):
+def second_try(body: SecondTryIn, user: dict = Depends(current_user)):
     sid = clean_id(body.session_id)
     gid = clean_id(body.gap_id)
-    sess = get_session(sid)
+    sess = owned_session(sid, user)
     text = body.text.strip()
     if len(text) < 5:
         raise HTTPException(400, "Please write your second try")
     gap = first(sb_select("gaps", id=gid))
     source = first(sb_select("attempts", id=gap["attempt_id"])) if gap else None
     if not source or source["session_id"] != sid:
-        raise HTTPException(404, "That follow-up does not belong to this session")
+        raise HTTPException(404, "That follow-up does not belong to this chat")
     attempts = sb_select("attempts", session_id=sid)
     if any(a["kind"] == "second_try" for a in attempts):
         raise HTTPException(409, "The second try is already saved")
@@ -243,9 +512,9 @@ def second_try(body: SecondTryIn):
 
 
 @app.post("/api/answer")
-def answer(body: AnswerIn):
+def answer(body: AnswerIn, user: dict = Depends(current_user)):
     sid = clean_id(body.session_id)
-    sess = get_session(sid)
+    sess = owned_session(sid, user)
     text = body.text.strip()
     if len(text) < 5:
         raise HTTPException(400, "Please write your answer")
