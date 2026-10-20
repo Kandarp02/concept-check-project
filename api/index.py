@@ -12,7 +12,7 @@ from pydantic import BaseModel
 app = FastAPI()
 
 GROQ_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 IDEA_ORDER = ["backend", "api-call", "key-browser", "storage", "pointer", "history", "placement"]
 
 # ---------------------------------------------------------------------------
