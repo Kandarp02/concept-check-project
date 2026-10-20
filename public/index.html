@@ -182,7 +182,11 @@
   .found { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 10px; }
   .found li { background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
   .found .idea { font-weight: 600; }
+  .found li.missing { border-color: rgba(251,191,36,.4); background: var(--warn-dim); }
+  .found .tag { color: var(--warn); font-family: "JetBrains Mono", monospace; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 4px; }
   .found .ev { color: var(--muted); font-size: 14px; margin-top: 4px; overflow-wrap: anywhere; }
+  .result .sub { margin: 18px 0 8px; font-size: 13px; font-family: "JetBrains Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .expected { margin: 0 0 16px; padding-left: 20px; display: grid; gap: 8px; }
   .note { color: var(--warn); font-size: 14px; margin: 0 0 16px; }
   .saved { color: var(--muted); font-size: 13px; margin: 16px 0 0; }
   .debug { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); background: var(--bg); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -506,7 +510,7 @@ function renderReplay(d) {
       const c = msg("A new case");
       c.append(el("div", "situation", s.case));
       msg("You", true).append(el("p", "", s.text));
-      t.append(resultCard({ passed: s.passed, total: s.total, found_count: s.found.length, found: s.found, blocked: false }));
+      t.append(resultCard({ passed: s.passed, total: s.total, found_count: s.found.length, found: s.found, blocked: false, missing: s.missing || [], expected: s.expected || [] }));
     }
   });
   if (!d.steps.some((s) => s.kind === "new_case")) {
@@ -709,16 +713,30 @@ function resultCard(r) {
   card.append(el("span", "badge", r.passed ? "Passed" : "Not passed this time"),
               el("h2", "", r.passed ? "You worked out a case you had not seen." : "Your answer did not cover everything this case needed."),
               el("p", "count", "Ideas found in your answer: " + r.found_count + " of " + r.total));
-  if (r.found.length) {
+  const miss = (!r.passed && r.missing) ? r.missing : [];
+  if (r.found.length || miss.length) {
     const ul = el("ul", "found");
     r.found.forEach((f) => {
       const li = el("li");
       li.append(el("div", "idea", f.idea), el("div", "ev", "You wrote: “" + f.evidence + "”"));
       ul.append(li);
     });
+    miss.forEach((m) => {
+      const li = el("li", "missing");
+      li.append(el("div", "tag", "Missing from your answer"),
+                el("div", "idea", m),
+                el("div", "ev", "This part was not in your answer, which is why it did not pass."));
+      ul.append(li);
+    });
     card.append(ul);
   }
-  if (r.blocked) card.append(el("p", "note", "Part of your answer gave a common wrong reason as the main cause."));
+  if (r.blocked) card.append(el("p", "note", "The main reason in your answer did not match what this case needed."));
+  if (!r.passed && r.expected && r.expected.length) {
+    card.append(el("h3", "sub", "A full answer would say"));
+    const ol = el("ol", "expected");
+    r.expected.forEach((k) => ol.append(el("li", "", k)));
+    card.append(ol);
+  }
   return card;
 }
 
